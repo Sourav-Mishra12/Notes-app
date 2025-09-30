@@ -13,9 +13,9 @@ NOTES_FILE = "notes.txt"
 
 def add_notes():             # creating a function to add notes by using the input function and apppending the files
 
-    notes = input("Enter your notes here : ")
+    notes = input("Enter your notes here : ").strip()
 
-    timestamp = dt.now().strftime("[%Y-%m-%d %H:%M]") 
+    timestamp = dt.datetime.now().strftime("[%Y-%m-%d %H:%M]") 
     note_with_stamp = f"{timestamp} {notes}"
 
     with open (NOTES_FILE , "a" ) as file :
@@ -30,14 +30,13 @@ def view_notes():            # using this function to show the notes that are al
         print("\n 📄 Your notes are below :- \n")
 
         try :
-              with open (NOTES_FILE , "r" ) as file :
-                notes = file.readlines()   # this will read all the lines in the file and we are storing it in a variable because in the next line we are checking if the notes exist or is it an empty file
+             notes  = load_notes()   # this will read all the lines in the file and we are storing it in a variable because in the next line we are checking if the notes exist or is it an empty file
 
-                if not notes:
+             if not notes:
                     print("No notes found here \n")
                     return
                 
-                for num, note in enumerate(notes,1):     # this will give a counter starting from the number 1
+             for num, note in enumerate(notes,1):     # this will give a counter starting from the number 1
                      print(f"{num} . {note.strip()}")
 
         except FileNotFoundError :
@@ -48,34 +47,33 @@ def view_notes():            # using this function to show the notes that are al
 
 
 
-def update_notes():
+def update_notes():          # writing this function in case if anyone want to update their notes 
 
     try : 
-        with open(NOTES_FILE , "r" ) as file:
-           notes=  file.readlines()
+         notes = load_notes()
 
-        if not notes :
-            print("There is nothing to update !!")
+         if not notes :
+            print("There is nothing to update !!")    # checking if the file is present or not
             return
 
-        for num,note in enumerate(notes,1):
+         for num,note in enumerate(notes,1):
             print(f"{num} . {note.strip()}")
         
-        index = int(input("Enter the note number you want to edit or update : ")) -1
+         index = int(input("Enter the note number you want to edit or update : ")) -1 
 
-        if 0 <= index < len(notes):
-            old_note = notes[index].strip()
-            confirm = input(f"Do you want to delete this note -> {old_note} (y/n) : ")
+         if 0 <= index < len(notes):
+            old_note = notes[index].strip()     # this will store the indexed note in a variable called old_note
+            confirm = input(f"Do you want to update this note -> {old_note} (y/n) : ")  # confirmation is important
 
             if confirm.lower() == "y":
                 new_note = input("Enter the new note content : ")
-                note[index] = new_note + "\n"
+                notes[index] = f"{dt.datetime.now().strftime('[%Y-%m-%d %H:%M]')} {new_note}\n"     # taking the new note as input and overwriting on the old note
                 with open (NOTES_FILE , "w") as file :
-                    file.writelines(new_note)
+                    file.writelines(notes) 
                 print("updation successful")
             else :
                 print("updation cancelled !!!")
-        else :
+         else :
             print("invalid index number")
 
     except FileNotFoundError :
@@ -85,20 +83,72 @@ def update_notes():
         print("entered an invalid input !!!!!")
                     
 
+def load_notes():
+    try :
+        with open(NOTES_FILE , "r") as f :
+            return f.readlines()
+        
+    except FileNotFoundError :
+        return []
 
+
+def save_file():
+
+    notes = load_notes()
+
+    if not notes :
+        print("No file exists to save !!")
+        return
+    
+    print ("\n💾 Do you want to save/export your notes?")
+    print("\n 1) Enter '1' to save as txt file ")
+    print("\n 2) Enter '2' to not save the notes ")
+
+    choice = input("enter your choice : ").strip()
+
+    if choice == "1" :
+        filename = input("Enter the file name (without extension) : ").strip()
+
+        if not filename :
+            print("❌ Filename cannot be empty!")
+            return
+
+        if not filename.endswith(".txt"):
+            filename += ".txt"
+        
+        try :
+            with open(filename , "r"):    # this will check if the file already exists or not and ask do the user want to overwrite ??
+                confirm = input(f"{filename} already exists , do you want to overwrite it?? (yes/no) : ").strip().lower()
+
+                if confirm != "yes" :
+                    print("🚫 Save cancelled.")
+                    return
+                
+        except FileNotFoundError :
+            pass
+
+
+        with open (filename , "w") as file :
+            file.writelines(notes)
+        print(f"✅ Notes saved to {filename}")
+
+    elif choice == "2":
+        print("Exiting without saving and exporting the file ")
+
+    else :
+        print("Invalid choice !!! ")
 
 
 def delete_notes():
      
-     with open(NOTES_FILE , "r") as file:
-        notes = file.readlines()
+     notes = load_notes()
 
      if not notes :
         print("There are no notes here !!! \n")
         return
      
      for num , note in enumerate(notes,1):
-          print(f"{num} : " , "{note}")
+          print(f"{num}  . {note.strip()}")
 
      try :      
 
@@ -125,13 +175,14 @@ def delete_notes():
 def main():
 
    while True:
-    print(" ------ WELCOME TO THE NOTES APP ------")
+    print(" \n ------ WELCOME TO THE NOTES APP ------ \n")
     print("1) ADD NOTES \n")
     print("2) VIEW NOTES \n")
     print("3) DELETE NOTES \n")
-    print("4) EXIT \n")
+    print("4) UPDATE NOTES\n")
+    print("5) EXIT \n")
 
-    choice = input("Enter your choice (1-4) : ")
+    choice = input("Enter your choice (1-5) : ").strip()
 
     if choice == "1" :
         add_notes()
@@ -143,10 +194,12 @@ def main():
         delete_notes()
 
     elif choice == "4" :
+        update_notes() 
+
+    elif choice == "5":
+        save_file()
         print("👋 THANK YOU !! HAVE A NICE DAY")
-        break 
-    else:
-        print("Enter a valid choice ")
+        break
 
 
 
