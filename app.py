@@ -1,59 +1,85 @@
 import streamlit as st
 import datetime as dt
 import os
-import io
+import uuid
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(page_title="My Notes App", page_icon="📝", layout="centered")
 
+# ---------- SIDEBAR NAVIGATION ----------
+st.sidebar.title("🗂️ Notes App Menu")
+menu = st.sidebar.radio(
+    "Go to:",
+    ["➕ Add Note", "📄 View Notes", "🔍 Search Notes"],
+)
+
 # ---------- CSS STYLING ----------
 st.markdown("""
-    <style>
-    .stApp {
-        background-color: #8C92AC;
-    }
+<style>
+.stApp{
+    background-color: #8C92AC;
+    height: 100% !important;
+    min-height: 100vh !important;
+}
 
-    .title {
-        text-align: center;
-        color: black;
-    }
+.title {
+    text-align: center;
+    color: black;
+    font-weight: 700;
+}
 
-    .note-card {
-        background-color: #fff;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 1px 1px 6px rgba(0,0,0,0.15);
-        margin-bottom: 10px;
-        transition : all 0.2s ease;
-    }
+.note-card {
+    background-color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.15);
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+.note-card:hover {
+    transform: scale(1.01);
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+.category-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.8em;
+}
+.Work { background-color: #3498db; }
+.Personal { background-color: #2ecc71; }
+.Study { background-color: #f1c40f; }
+.Ideas { background-color: #9b59b6; }
+.Other { background-color: #95a5a6; }
 
-    .stTextArea textarea {
-        border: 2px solid #2E4053 !important;
-        border-radius: 8px !important;
-        background-color: #FDFEFE !important;
-        color: #17202A !important;
-        font-size: 16px !important;
-        padding: 8px !important;
-    }
+.stTextArea textarea {
+    border: 2px solid #2E4053 !important;
+    border-radius: 8px !important;
+    background-color: #FDFEFE !important;
+    color: #17202A !important;
+    font-size: 16px !important;
+    padding: 8px !important;
+}
 
-    .stTextArea textarea:focus {
-        border-color: #3498DB !important;
-        box-shadow: 0 0 6px #85C1E9 !important;
-        outline: none !important;
-        background-color : #ADD8E6 !important;
-    }
+.stTextArea textarea:focus {
+    border-color: #3498DB !important;
+    box-shadow: 0 0 6px #85C1E9 !important;
+    outline: none !important;
+    background-color: #EAF2F8 !important;
+}
 
-    div.stButton > button:hover {
-        background-color: #ADD8E6;
-        transform: scale(1.05);
-    }
-    </style>
+div.stButton > button:hover {
+    background-color: #ADD8E6;
+    transform: scale(1.05);
+}
+</style>
 """, unsafe_allow_html=True)
 
 # ---------- FILE ----------
 NOTES_FILE = "notes.txt"
 
-# ---------- COMPATIBILITY RERUN HANDLER ----------
+# ---------- RERUN HANDLER ----------
 if hasattr(st, "rerun"):
     rerun = st.rerun
 else:
@@ -73,85 +99,98 @@ def save_notes(notes):
 
 def add_note(content, category, pinned):
     timestamp = dt.datetime.now().strftime("[%Y-%m-%d %H:%M]")
+    note_id = str(uuid.uuid4())
     with open(NOTES_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{timestamp} | {category} | {'Pinned' if pinned else 'Unpinned'} | {content}\n")
+        f.write(f"{note_id} | {timestamp} | {category} | {'Pinned' if pinned else 'Unpinned'} | {content}\n")
 
 # ---------- HEADER ----------
 st.markdown('<h1 class="title">📝 MY NOTES APP</h1>', unsafe_allow_html=True)
 
-# ---------- INPUT AREA ----------
-category = st.selectbox("🏷️ Choose a Category", ["Personal", "Work", "Study", "Ideas", "Other"])
-new_note = st.text_area("ENTER THE NOTE HERE:")
-pinned = st.checkbox("⭐ Pin this note to top")
+# ---------- MENU NAVIGATION ----------
+if menu == "➕ Add Note":
+    # --- ADD NOTE PAGE ---
+    st.subheader("✍️ Add a New Note")
 
+    category = st.selectbox("🏷️ Choose a Category", ["Personal", "Work", "Study", "Ideas", "Other"])
+    new_note = st.text_area("ENTER THE NOTE HERE:")
+    pinned = st.checkbox("⭐ Pin this note to top")
 
-col1, col2, col3 = st.columns([2, 2, 1])
-with col2:
     if st.button("➕ Add Note"):
         if new_note.strip():
             add_note(new_note.strip(), category, pinned)
-            st.success("NOTE ADDED!!")
+            st.success("✅ Note Added Successfully!")
             st.session_state["new_note"] = ""
             rerun()
         else:
-            st.warning("PLEASE ENTER SOMETHING!!")
+            st.warning("⚠️ Please enter something before saving.")
 
-st.markdown("---")
+elif menu == "📄 View Notes":
+    # --- VIEW NOTES PAGE ---
+    st.subheader("📄 Saved Notes")
 
-# ---------- DOWNLOAD BUTTON ----------
+    notes = load_notes()
+    if not notes:
+        st.info("No notes available yet. Add one from the sidebar.")
+    else:
+        pinned_notes = [n for n in notes if "Pinned" in n]
+        unpinned_notes = [n for n in notes if "Unpinned" in n]
+        display_notes = pinned_notes + unpinned_notes
 
-notes = load_notes()
-if notes:
-    all_notes_text = "\n".join(notes)
-    st.download_button("💾 Download All Notes", all_notes_text, file_name="my_notes.txt")
-else:
-    st.info("No notes to download yet.")
+        for i, note in enumerate(display_notes, start=1):
+            try:
+                note_id, timestamp, category, status, content = note.split(" | ", 4)
+            except ValueError:
+                continue
 
-st.markdown("---")
+            st.markdown(
+                f"""
+                <div class="note-card">
+                    <span class="category-tag {category}">{category}</span>
+                    {'📌' if 'Pinned' in status else ''}
+                    <b>{timestamp}</b>
+                    <p>{content.strip()}</p>
+                </div>
+                """, unsafe_allow_html=True
+            )
 
-# ---------- SEARCH AND DISPLAY ----------
+            col1, col2 = st.columns([1, 6])
+            with col1:
+                if st.button("🗑️ Delete", key=f"del_{note_id}"):
+                    notes.remove(note)
+                    save_notes(notes)
+                    st.warning("Note deleted.")
+                    rerun()
 
-st.subheader("📄 Saved Notes:")
-search = st.text_input("🔍 Search notes:")
-filtered = [n for n in notes if search.lower() in n.lower()] if search else notes
+elif menu == "🔍 Search Notes":
+    # --- SEARCH NOTES PAGE ---
+    st.subheader("🔍 Search Notes")
 
-if filtered:
+    search = st.text_input("Type a keyword to search:")
+    notes = load_notes()
 
-    # Show pinned notes first
-    
-    pinned_notes = [n for n in filtered if "Pinned" in n]
-    unpinned_notes = [n for n in filtered if "Unpinned" in n]
-    display_notes = pinned_notes + unpinned_notes
+    if not notes:
+        st.info("No notes yet. Add some from the sidebar.")
+    elif search:
+        filtered = [n for n in notes if search.lower() in n.lower()]
+        if filtered:
+            st.success(f"Found {len(filtered)} matching note(s).")
+            for note in filtered:
+                try:
+                    note_id, timestamp, category, status, content = note.split(" | ", 4)
+                except ValueError:
+                    continue
 
-    for i, note in enumerate(display_notes, start=1):
-        if " | " in note:
-         try:
-            timestamp, category, status, content = note.split(" | ", 3)
-         except ValueError:
-            continue  # Skip malformed lines
+                st.markdown(
+                    f"""
+                    <div class="note-card">
+                        <span class="category-tag {category}">{category}</span>
+                        {'📌' if 'Pinned' in status else ''}
+                        <b>{timestamp}</b>
+                        <p>{content.strip()}</p>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
         else:
-             if "." in note :
-                 timestamp,content = note.split("." , 1)
-                 category , status = "General" , "Unpinned"
-             else:
-                 timestamp,category,status,content="","General","Unpinned",note
-
-        st.markdown(
-            f"""
-            <div class="note-card">
-                <b>#{i}</b> — <b>{timestamp}</b> <span style='color:gray;'>[{category}]</span><br>
-                {'⭐' if status == 'Pinned' else ''} {content}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🗑️ Delete", key=f"del_{i}"):
-                notes.remove(note)
-                save_notes(notes)
-                st.warning("Note deleted.")
-                rerun()
-else:
-    st.info("🕮 No Notes Yet !!")
+            st.warning("No matching notes found.")
+    else:
+        st.info("Enter a word or phrase to search your notes.")
