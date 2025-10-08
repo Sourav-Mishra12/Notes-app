@@ -2,6 +2,7 @@ import streamlit as st
 import datetime as dt
 import os
 import uuid
+import html
 
 # ---------- PAGE CONFIG ----------
 st.set_page_config(page_title="My Notes App", page_icon="📝", layout="centered")
@@ -103,6 +104,10 @@ def add_note(content, category, pinned):
     with open(NOTES_FILE, "a", encoding="utf-8") as f:
         f.write(f"{note_id} | {timestamp} | {category} | {'Pinned' if pinned else 'Unpinned'} | {content}\n")
 
+# ---------- SESSION STATE ----------
+if "edit_id" not in st.session_state:
+    st.session_state["edit_id"] = None
+
 # ---------- HEADER ----------
 st.markdown('<h1 class="title">📝 MY NOTES APP</h1>', unsafe_allow_html=True)
 
@@ -142,24 +147,52 @@ elif menu == "📄 View Notes":
             except ValueError:
                 continue
 
-            st.markdown(
-                f"""
-                <div class="note-card">
-                    <span class="category-tag {category}">{category}</span>
-                    {'📌' if 'Pinned' in status else ''}
-                    <b>{timestamp}</b>
-                    <p>{content.strip()}</p>
-                </div>
-                """, unsafe_allow_html=True
-            )
+            # --- EDIT MODE ---
+            if st.session_state.get("edit_id") == note_id:
+                st.markdown(f"### ✏️ Editing Note #{i}")
+                new_content = st.text_area("Edit your note:", content, key=f"edit_area_{note_id}")
 
-            col1, col2 = st.columns([1, 6])
-            with col1:
-                if st.button("🗑️ Delete", key=f"del_{note_id}"):
-                    notes.remove(note)
-                    save_notes(notes)
-                    st.warning("Note deleted.")
-                    rerun()
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("💾 Save", key=f"save_{note_id}"):
+                        updated_note = f"{note_id} | {timestamp} | {category} | {status} | {new_content.strip()}"
+                        index = notes.index(note)
+                        notes[index] = updated_note
+                        save_notes(notes)
+                        st.session_state["edit_id"] = None
+                        st.success("✅ Note updated successfully!")
+                        rerun()
+
+                with col2:
+                    if st.button("❌ Cancel", key=f"cancel_{note_id}"):
+                        st.session_state["edit_id"] = None
+                        rerun()
+
+            # --- NORMAL DISPLAY ---
+            else:
+                escaped_content = html.escape(content.strip())
+                escaped_timestamp = html.escape(timestamp.strip())
+                st.markdown(
+                    f"""
+                    <div class="note-card">
+                        <span class="category-tag {category}">{category}</span>
+                        {'📌' if 'Pinned' in status else ''}
+                        {escaped_timestamp} | {escaped_content}
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+
+                col1, col2, col3 = st.columns([1, 1, 6])
+                with col1:
+                    if st.button("🗑️ Delete", key=f"del_{note_id}"):
+                        notes.remove(note)
+                        save_notes(notes)
+                        st.warning("Note deleted.")
+                        rerun()
+                with col2:
+                    if st.button("✏️ Edit", key=f"edit_{note_id}"):
+                        st.session_state["edit_id"] = note_id
+                        rerun()
 
 elif menu == "🔍 Search Notes":
     # --- SEARCH NOTES PAGE ---
