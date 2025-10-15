@@ -137,62 +137,77 @@ elif menu == "📄 View Notes":
     if not notes:
         st.info("No notes available yet. Add one from the sidebar.")
     else:
+        # --- CATEGORY FILTER ---
+        categories = ["All", "Personal", "Work", "Study", "Ideas", "Other"]
+        selected_category = st.selectbox("📂 Filter by Category", categories)
+
         pinned_notes = [n for n in notes if "Pinned" in n]
         unpinned_notes = [n for n in notes if "Unpinned" in n]
         display_notes = pinned_notes + unpinned_notes
 
-        for i, note in enumerate(display_notes, start=1):
-            try:
-                note_id, timestamp, category, status, content = note.split(" | ", 4)
-            except ValueError:
-                continue
+        # Apply category filter
+        if selected_category != "All":
+            display_notes = [
+                n for n in display_notes
+                if f"| {selected_category} |" in n
+            ]
 
-            # --- EDIT MODE ---
-            if st.session_state.get("edit_id") == note_id:
-                st.markdown(f"### ✏️ Editing Note #{i}")
-                new_content = st.text_area("Edit your note:", content, key=f"edit_area_{note_id}")
+        # Handle empty results
+        if not display_notes:
+            st.info(f"No notes found in '{selected_category}' category.")
+        else:
+            for i, note in enumerate(display_notes, start=1):
+                try:
+                    note_id, timestamp, category, status, content = note.split(" | ", 4)
+                except ValueError:
+                    continue
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("💾 Save", key=f"save_{note_id}"):
-                        updated_note = f"{note_id} | {timestamp} | {category} | {status} | {new_content.strip()}"
-                        index = notes.index(note)
-                        notes[index] = updated_note
-                        save_notes(notes)
-                        st.session_state["edit_id"] = None
-                        st.success("✅ Note updated successfully!")
-                        rerun()
+                # --- EDIT MODE ---
+                if st.session_state.get("edit_id") == note_id:
+                    st.markdown(f"### ✏️ Editing Note #{i}")
+                    new_content = st.text_area("Edit your note:", content, key=f"edit_area_{note_id}")
 
-                with col2:
-                    if st.button("❌ Cancel", key=f"cancel_{note_id}"):
-                        st.session_state["edit_id"] = None
-                        rerun()
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("💾 Save", key=f"save_{note_id}"):
+                            updated_note = f"{note_id} | {timestamp} | {category} | {status} | {new_content.strip()}"
+                            index = notes.index(note)
+                            notes[index] = updated_note
+                            save_notes(notes)
+                            st.session_state["edit_id"] = None
+                            st.success("✅ Note updated successfully!")
+                            rerun()
 
-            # --- NORMAL DISPLAY ---
-            else:
-                escaped_content = html.escape(content.strip())
-                escaped_timestamp = html.escape(timestamp.strip())
-                st.markdown(
-                    f"""
-                    <div class="note-card">
-                        <span class="category-tag {category}">{category}</span>
-                        {'📌' if 'Pinned' in status else ''}
-                        {escaped_timestamp} | {escaped_content}
-                    </div>
-                    """, unsafe_allow_html=True
-                )
+                    with col2:
+                        if st.button("❌ Cancel", key=f"cancel_{note_id}"):
+                            st.session_state["edit_id"] = None
+                            rerun()
 
-                col1, col2, col3 = st.columns([1, 1, 6])
-                with col1:
-                    if st.button("🗑️ Delete", key=f"del_{note_id}"):
-                        notes.remove(note)
-                        save_notes(notes)
-                        st.warning("Note deleted.")
-                        rerun()
-                with col2:
-                    if st.button("✏️ Edit", key=f"edit_{note_id}"):
-                        st.session_state["edit_id"] = note_id
-                        rerun()
+                # --- NORMAL DISPLAY ---
+                else:
+                    escaped_content = html.escape(content.strip())
+                    escaped_timestamp = html.escape(timestamp.strip())
+                    st.markdown(
+                        f"""
+                        <div class="note-card">
+                            <span class="category-tag {category}">{category}</span>
+                            {'📌' if 'Pinned' in status else ''}
+                            {escaped_timestamp} | {escaped_content}
+                        </div>
+                        """, unsafe_allow_html=True
+                    )
+
+                    col1, col2, col3 = st.columns([1, 1, 6])
+                    with col1:
+                        if st.button("🗑️ Delete", key=f"del_{note_id}"):
+                            notes.remove(note)
+                            save_notes(notes)
+                            st.warning("Note deleted.")
+                            rerun()
+                    with col2:
+                        if st.button("✏️ Edit", key=f"edit_{note_id}"):
+                            st.session_state["edit_id"] = note_id
+                            rerun()
 
 elif menu == "🔍 Search Notes":
     # --- SEARCH NOTES PAGE ---
@@ -201,10 +216,19 @@ elif menu == "🔍 Search Notes":
     search = st.text_input("Type a keyword to search:")
     notes = load_notes()
 
+    # --- CATEGORY FILTER FOR SEARCH ---
+    categories = ["All", "Personal", "Work", "Study", "Ideas", "Other"]
+    selected_category = st.selectbox("📂 Search within Category", categories)
+
     if not notes:
         st.info("No notes yet. Add some from the sidebar.")
     elif search:
         filtered = [n for n in notes if search.lower() in n.lower()]
+
+        # Apply category filter
+        if selected_category != "All":
+            filtered = [n for n in filtered if f"| {selected_category} |" in n]
+
         if filtered:
             st.success(f"Found {len(filtered)} matching note(s).")
             for note in filtered:
